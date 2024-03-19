@@ -1,0 +1,110 @@
+<?php
+// Add custom Theme Functions here
+function layDuLieu($DangKy) {
+	global $wpdb;
+	
+	// Select all data from the table
+	$results = $wpdb->get_results("SELECT * FROM $DangKy", ARRAY_A);
+
+	// Check if there are any results
+	if ($results) {
+		// Loop through each row of results
+		foreach ($results as $row) {
+			// Access individual columns using associative array keys
+			echo "Name 1: " . $row['name'] . "<br>";
+			echo "Email 2: " . $row['email'] . "<br>";
+			echo "Create at 3: " . $row['created_at'] . "<br>";
+			// Add more columns as needed
+			echo "<br>";
+		}
+	} else {
+		echo "No data found in the table.";
+	}
+}
+
+function themDuLieu($DangKy, $params) {
+	global $wpdb;
+	
+	$curTime = date('Y-m-d H:i:s');
+	$query = "INSERT INTO {$DangKy}(name, email, created_at) VALUES('{$params['name']}','{$params['email']}','{$curTime}')"; 
+	echo 'Insert query: ' . $query;
+	
+	if($wpdb->query($query)){
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function taoBangDuLieu($DangKy) {
+	global $wpdb;
+
+	$sql = "CREATE TABLE {$DangKy} (
+		id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+		name VARCHAR(255) NOT NULL,
+		email VARCHAR(255) NOT NULL,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+	)";
+
+	if($wpdb->query($sql)){
+		return true;
+	} else {
+		return false;
+	}
+}
+
+function kiemTraBangTonTai($DangKy) {
+	global $wpdb;
+	
+	$query = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $DangKy ) );
+	
+	if ( ! $wpdb->get_var( $query ) == $DangKy ) {
+		// Bang khong ton tai
+		return false;
+	} else {
+		// Bang ton tai
+		return true;
+	}
+}
+
+if (($_SERVER["REQUEST_METHOD"] === "POST") && isset($_POST['my_form'])) {
+	// Add code to save the form data to the database
+  	global $wpdb;
+	
+	/*create table if not exists*/
+    $DangKy = $wpdb->prefix.'contact_form_submission';
+
+    $query = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $DangKy ) );
+	$name = sanitize_text_field($_POST["name"]);
+	$email = sanitize_email($_POST["email"]);
+	$message = sanitize_textarea_field($_POST["message"]);
+    
+	// 1. Kiem tra bang ton tai
+	$queryResult = kiemTraBangTonTai($DangKy);
+	
+	// 2. Tao bang neu chua ton tai
+	if(!$queryResult) {
+		$queryResult = taoBangDuLieu($DangKy);
+	} else {
+		echo "Bi loi tao bang";
+		exit;
+	}
+	
+	// 3. Them du lieu khi bang da ton tai
+	if($queryResult) {
+		$params = $_POST;
+		
+		$queryResult = themDuLieu($DangKy, $params);
+	} else {
+		echo "Bi loi them du lieu";
+	}
+	
+	// 4. Lay du lieu neu them thanh cong
+	if($queryResult) {
+		layDuLieu($DangKy);
+	} else {
+		echo "bi loi lay du lieu";
+	}
+	
+	exit;
+}
